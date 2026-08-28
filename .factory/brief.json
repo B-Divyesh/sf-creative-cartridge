@@ -1,0 +1,10 @@
+{
+  "slug": "creative-cartridge",
+  "title": "Creative Cartridge",
+  "territory": "games-creative",
+  "user": "Parents setting up an old computer for a 4–7-year-old who want a finite, offline creative play space rather than an internet feed.",
+  "smallest_useful_product": "A downloadable PWA bundle with six tiny local activities (sound painting, shape stories, camera-free stop-motion cards, rhythm pads), a parent PIN for cartridge selection, and an offline health check.",
+  "artifact_class": "pwa-offline",
+  "monetization": "one-time — content packs have clear finite value and the safety proposition is stronger without ongoing child profiling.",
+  "constraints": "No collection of child data; fully usable offline after installation; large assets need a small-download mode; parent PIN is a convenience, not a security boundary."
+}
