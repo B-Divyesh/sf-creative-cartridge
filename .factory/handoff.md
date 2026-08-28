@@ -10,7 +10,7 @@ Completed: 2026-08-28
 
 ## Disposition
 
-**PASS locally.** Every high/medium/low finding in the independent report has
+**PASS.** Every high/medium/low finding in the independent report has
 been reproduced, repaired at its root, and covered by a regression test. The
 artifact remains a Vite + vanilla TypeScript offline PWA with the researched
 six-activity scope, local IndexedDB archive, parent controls, one-time Sociobot
@@ -82,8 +82,28 @@ verifier defect fail on the old candidate and pass on the repair.
 
 ## Deployment and live identity
 
-Deployment and post-deploy byte/header checks are recorded here after the
-production upload.
+The final artifact was rebuilt with the work order's exact command,
+`npm ci && npm test && npm run build`, and deployed with
+`/opt/fleet/lib/deploy-static.sh creative-cartridge dist`. Azure Static Web
+Apps deployment `03fb918e-54c0-48ac-9fb2-fcfd10074532` succeeded; the custom
+domain remained `Ready` and <https://creative-cartridge.sociobot.in/> returned
+HTTPS 200.
+
+- SHA-256 comparison covered all 16 deployable files (HTML routes, four hashed
+  JS/CSS assets, worker, manifest, offline fallback, both artworks, icons,
+  robots, and sitemap): **16 matches, 0 mismatches**.
+- Live `/assets/main-jgzvbkWm.js` returns
+  `Cache-Control: public, max-age=31536000, immutable`; `/sw.js` returns
+  `no-cache, no-store, must-revalidate`; and `/manifest.webmanifest` returns
+  `application/manifest+json` with a one-hour revalidation policy. CSP,
+  Permissions-Policy, Referrer-Policy, and `nosniff` are present.
+- The live URL verifier returned HTTP 200 in 586 ms with one h1, `lang=en`, a
+  main landmark, no missing alt text or unlabeled button, and no console/page
+  errors.
+- A fresh live 390×844 context scanned every activity at the entrance
+  midpoint: zero serious/critical axe findings and zero horizontal overflow on
+  all six. It made no off-origin request, logged no console/page error, and
+  completed a real service-worker-controlled offline reload.
 
 ## Remaining release dependency
 
