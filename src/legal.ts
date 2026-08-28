@@ -5,7 +5,7 @@ const target = document.querySelector<HTMLDivElement>('#legal');
 if (!target) throw new Error('Legal page could not start.');
 
 target.innerHTML = isPrivacy ? `
-  <main id="main" class="legal">
+  <main id="main" class="legal" tabindex="-1">
     <header><p class="kicker">The plain-language edition · Updated 28 August 2026</p><h1>Privacy</h1></header>
     <p><strong>Creative Cartridge does not collect child data.</strong> There are no accounts, ads, trackers, analytics, social features, or third-party runtime scripts.</p>
     <h2>What stays on this device</h2>
@@ -20,7 +20,7 @@ target.innerHTML = isPrivacy ? `
     <p>Questions can be sent to <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a>.</p>
     <p><a href="/">Return to Creative Cartridge</a> · <a href="/terms/">Read the terms</a></p>
   </main>` : `
-  <main id="main" class="legal">
+  <main id="main" class="legal" tabindex="-1">
     <header><p class="kicker">The plain-language edition · Updated 28 August 2026</p><h1>Terms</h1></header>
     <p>Creative Cartridge is a finite creative play space for family use. A parent or guardian should install and configure it for a child.</p>
     <h2>Parent PIN</h2>

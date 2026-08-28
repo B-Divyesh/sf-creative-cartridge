@@ -63,7 +63,7 @@ function renderHome() {
         <div class="masthead-title"><h1>Creative<br>Cartridge</h1><p class="issue-mark">Issue No. 1<br>Six things to make<br>No feed inside</p></div>
       </header>
       <div class="status-ribbon" aria-live="polite"><span class="online-state" id="network-state">Checking this copy…</span><span id="save-summary">Everything made here stays on this device.</span></div>
-      <main id="main">
+      <main id="main" tabindex="-1">
         <section class="hero" aria-labelledby="cover-heading">
           <picture><source media="(max-width: 760px)" srcset="/art/press-cartridge-800.webp"><img src="/art/press-cartridge-1280.webp" width="1280" height="853" fetchpriority="high" alt="A cardboard cartridge spilling paper shapes, rhythm dots, flip cards, a creature and a small theatre onto newsprint."></picture>
           <div class="hero-copy"><p class="kicker">Made for ages 4–7 and their grown-ups</p><h2 id="cover-heading">Open the paper. Make something.</h2><p>Six small creative activities. Nothing to scroll, no account to make, and no internet needed after this copy is ready.</p><button class="primary" type="button" data-start-first>Start with today’s first activity</button></div>
@@ -283,10 +283,13 @@ function openRhythm(activity: Activity) {
   const sheet = makeSheet(activity, `
     <p class="instruction">Tap the pads or number keys 1–8. The tape holds only 16 hits. Play runs the tape once and rests.</p>
     <div class="rhythm-grid">${padNames.map((name, index) => `<button type="button" class="pad" data-pad="${index}"><span>${name}</span><small>key ${index + 1}</small></button>`).join('')}</div>
-    <div class="beat-tape" data-tape aria-label="Sixteen-hit rhythm tape"></div>
+    <ol class="beat-tape" data-tape aria-label="Sixteen-hit rhythm tape"></ol>
     <div class="tool-row"><button class="primary" type="button" data-play>Play the tape once</button><button type="button" data-clear>Clear the tape</button><button type="button" data-save>Save this rhythm</button><button type="button" data-sound>${soundOn ? 'Pause sound' : 'Turn sound on'}</button></div><p class="save-line" data-save-status aria-live="polite"></p><section class="saved-shelf" data-saved-shelf></section>`);
   let pattern: number[] = []; let timer: number | undefined; let playIndex = -1;
-  const render = () => { sheet.querySelector<HTMLElement>('[data-tape]')!.innerHTML = Array.from({ length: 16 }, (_, index) => `<div class="beat ${pattern[index] !== undefined ? 'on' : ''}" aria-label="Beat ${index + 1}${pattern[index] !== undefined ? `, ${padNames[pattern[index]]}` : ', empty'}">${pattern[index] !== undefined ? pattern[index] + 1 : ''}</div>`).join(''); };
+  const render = () => { sheet.querySelector<HTMLElement>('[data-tape]')!.innerHTML = Array.from({ length: 16 }, (_, index) => {
+    const pad = pattern[index];
+    return `<li class="beat ${pad !== undefined ? 'on' : ''}"><span aria-hidden="true">${pad !== undefined ? pad + 1 : ''}</span><span class="visually-hidden">Beat ${index + 1}, ${pad !== undefined ? padNames[pad] : 'empty'}</span></li>`;
+  }).join(''); };
   const hit = (index: number, record = true) => { const pad = sheet.querySelector<HTMLElement>(`[data-pad="${index}"]`); pad?.classList.add('hit'); window.setTimeout(() => pad?.classList.remove('hit'), 120); playTone(frequencies[index], .14, index % 2 ? 'square' : 'triangle'); if (record) { if (pattern.length >= 16) { showSaveMessage(sheet, 'The 16-hit tape is full. Play it or clear it.'); return; } pattern.push(index); render(); } };
   sheet.querySelectorAll<HTMLButtonElement>('[data-pad]').forEach(button => button.addEventListener('click', () => hit(Number(button.dataset.pad))));
   const onKey = (event: KeyboardEvent) => { const index = Number(event.key) - 1; if (index >= 0 && index < 8 && !event.repeat) { event.preventDefault(); hit(index); } };

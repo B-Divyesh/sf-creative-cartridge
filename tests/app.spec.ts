@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
+
+const activityActions = [
+  'Paint with sound',
+  'Set a story',
+  'Make six frames',
+  'Tap a rhythm',
+  'Print a creature',
+  'Raise the curtain'
+];
+
+const seriousOrCritical = (violations: Awaited<ReturnType<AxeBuilder['analyze']>>['violations']) =>
+  violations.filter(item => ['serious', 'critical'].includes(item.impact ?? ''));
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -59,12 +72,63 @@ test('keyboard can make and play a rhythm', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Stop the tape' })).toBeVisible();
 });
 
+test('skip link transfers keyboard focus to the main content', async ({ page }) => {
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to the activities' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
+});
+
+test('every activity sheet has valid ARIA and contrast throughout its entrance', async ({ page }) => {
+  for (const action of activityActions) {
+    await page.getByRole('button', { name: action }).click();
+    const opacityAtAnimationMidpoint = await page.locator('.sheet').evaluate(element => {
+      for (const animation of element.getAnimations()) {
+        animation.pause();
+        const duration = Number(animation.effect?.getTiming().duration) || 0;
+        animation.currentTime = duration / 2;
+      }
+      return getComputedStyle(element).opacity;
+    });
+    expect(opacityAtAnimationMidpoint).toBe('1');
+
+    const results = await new AxeBuilder({ page: page as never }).analyze();
+    expect(seriousOrCritical(results.violations), `${action} accessibility violations`).toEqual([]);
+
+    if (action === 'Tap a rhythm') {
+      await expect(page.getByRole('list', { name: 'Sixteen-hit rhythm tape' })).toBeVisible();
+      await expect(page.getByRole('listitem')).toHaveCount(16);
+      await expect(page.getByRole('listitem').first()).toContainText('Beat 1, empty');
+      await expect(page.locator('.beat[aria-label]')).toHaveCount(0);
+    }
+    await page.getByRole('button', { name: 'Return to the front page' }).click();
+  }
+});
+
 test('home and parent gate have no serious accessibility violations', async ({ page }) => {
   const home = await new AxeBuilder({ page: page as never }).analyze();
-  expect(home.violations.filter(item => ['serious', 'critical'].includes(item.impact ?? ''))).toEqual([]);
+  expect(seriousOrCritical(home.violations)).toEqual([]);
   await page.getByRole('button', { name: 'Parent desk' }).click();
   const gate = await new AxeBuilder({ page: page as never }).analyze();
-  expect(gate.violations.filter(item => ['serious', 'critical'].includes(item.impact ?? ''))).toEqual([]);
+  expect(seriousOrCritical(gate.violations)).toEqual([]);
+});
+
+test('static deployment policy serves immutable bundles and a typed manifest', async () => {
+  const config = JSON.parse(await readFile('dist/staticwebapp.config.json', 'utf8')) as {
+    routes: Array<{ route: string; headers: Record<string, string> }>;
+    globalHeaders: Record<string, string>;
+    mimeTypes: Record<string, string>;
+  };
+  const route = (path: string) => config.routes.find(item => item.route === path)?.headers;
+
+  expect(route('/assets/*')?.['Cache-Control']).toBe('public, max-age=31536000, immutable');
+  expect(route('/sw.js')?.['Cache-Control']).toBe('no-cache, no-store, must-revalidate');
+  expect(config.mimeTypes['.webmanifest']).toBe('application/manifest+json');
+  expect(config.globalHeaders['Content-Security-Policy']).toContain("default-src 'self'");
+  expect(config.globalHeaders['Permissions-Policy']).toContain('camera=()');
+
+  const serviceWorker = await readFile('dist/sw.js', 'utf8');
+  expect(serviceWorker).not.toContain('/staticwebapp.config.json');
 });
 
 test('installed shell reloads while offline', async ({ page, context }) => {
@@ -84,8 +148,14 @@ test('installed shell reloads while offline', async ({ page, context }) => {
 test('privacy and terms are real standalone pages', async ({ page }) => {
   await page.goto('/privacy/');
   await expect(page.locator('h1')).toHaveText('Privacy');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
   await page.goto('/terms/');
   await expect(page.locator('h1')).toHaveText('Terms');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
 });
 
 test('returned purchase license is stored, stripped, and unlocks bonus ink', async ({ page }) => {

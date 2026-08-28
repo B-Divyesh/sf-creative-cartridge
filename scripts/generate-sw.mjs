@@ -7,7 +7,7 @@ const walk = async (dir) => (await Promise.all((await readdir(dir, { withFileTyp
   return entry.isDirectory() ? walk(path) : path;
 }))).flat();
 const builtFiles = (await walk(root))
-  .filter(file => !file.endsWith('sw.js') && !file.endsWith('.map'))
+  .filter(file => !file.endsWith('sw.js') && !file.endsWith('.map') && !file.endsWith('staticwebapp.config.json'))
   .map(file => `/${relative(root, file)}`);
 const files = [...new Set(['/', '/privacy/', '/terms/', ...builtFiles])];
 const version = `cc-${Date.now().toString(36)}`;
