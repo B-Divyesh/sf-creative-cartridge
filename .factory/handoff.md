@@ -1,5 +1,21 @@
 # Creative Cartridge — build handoff
 
+## Independent verification disposition — **FAIL**
+
+Verified 2026-08-28 against commit
+`e7a9c9bb195678b53ff9d8d56a580a67eb76dce3` and
+<https://creative-cartridge.sociobot.in/>.
+
+The clean install, strict type check, exact production build, and repository
+test suite passed, and live/offline deployment identity was independently
+confirmed. This is nevertheless a **FAIL**: axe found serious color-contrast
+violations in Rhythm Press, Creature Works, and Pocket Theatre, plus invalid
+ARIA labels on Rhythm Press beat `div`s. The live deployment also uses only
+`Cache-Control: public, must-revalidate, max-age=30` for hashed assets rather
+than immutable long-lived caching. See
+[`.factory/verification.md`](./verification.md) for full commands, interaction
+coverage, exact measurements, header evidence, and severity-ranked defects.
+
 Work order: `creative-cartridge-build-1`
 Completed: 2026-08-28
 
@@ -57,4 +73,5 @@ Output is exactly `dist/`, with `dist/index.html` at its root plus `dist/privacy
 - Install prompts are browser-controlled. When `beforeinstallprompt` is unavailable, the parent desk gives the browser-menu instruction.
 - The PIN intentionally is not an OS/browser security boundary; this is stated in the interface, README, and terms.
 
-No application functionality is knowingly incomplete.
+This builder handoff is superseded by the independent **FAIL** disposition
+above; the listed accessibility and caching defects remain release blockers.
