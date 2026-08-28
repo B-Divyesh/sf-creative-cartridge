@@ -37,12 +37,16 @@ Playwright 1.58.2 plus `@axe-core/playwright` 4.10.2:
   serves `.webmanifest` as `application/manifest+json`. It also supplies CSP,
   Permissions-Policy, Referrer-Policy, and `nosniff` headers. The hosting config
   is deliberately excluded from the service-worker precache.
+- The required 390 px live sweep exposed one additional serious axe finding:
+  Six-card Cinema's horizontally scrollable frame strip could not receive
+  keyboard focus. It is now a named, focusable region, so keyboard users can
+  scroll the six frames.
 
 `tests/app.spec.ts` now pauses each activity entrance at its midpoint and runs
-the serious/critical axe gate across all six sheets; it asserts the Rhythm
-Press list semantics, home/legal skip-link focus, and the built response-policy
-contract. This makes each verifier defect fail on the old candidate and pass on
-the repair.
+the serious/critical axe gate across all six sheets at both desktop and 390 px;
+it asserts the Rhythm Press list semantics, focusable frame region, home/legal
+skip-link focus, and the built response-policy contract. This makes each
+verifier defect fail on the old candidate and pass on the repair.
 
 ## Verification evidence
 
@@ -55,7 +59,7 @@ the repair.
   privacy/terms, returned-license handling, and response policy.
 - Production build: `npm run build` — `dist/index.html` at the required root;
   generated versioned worker with 18 precached app files. Initial assets are
-  35.88 KB JS + 0.76 KB helper JS raw (12.52 KB combined gzip) and 12.00 KB CSS
+  35.90 KB JS + 0.76 KB helper JS raw (12.53 KB combined gzip) and 12.00 KB CSS
   raw (3.56 KB gzip), within the 200 KB/50 KB budgets. Packaging/consumer tests
   are not applicable to a directly deployed static PWA.
 - `npm audit --audit-level=high` — 0 vulnerabilities.

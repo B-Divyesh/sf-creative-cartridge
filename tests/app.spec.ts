@@ -79,29 +79,35 @@ test('skip link transfers keyboard focus to the main content', async ({ page }) 
   await expect(page.locator('main')).toBeFocused();
 });
 
-test('every activity sheet has valid ARIA and contrast throughout its entrance', async ({ page }) => {
-  for (const action of activityActions) {
-    await page.getByRole('button', { name: action }).click();
-    const opacityAtAnimationMidpoint = await page.locator('.sheet').evaluate(element => {
-      for (const animation of element.getAnimations()) {
-        animation.pause();
-        const duration = Number(animation.effect?.getTiming().duration) || 0;
-        animation.currentTime = duration / 2;
+test('every activity sheet has valid ARIA and contrast on desktop and 390px mobile', async ({ page }) => {
+  for (const viewport of [{ label: 'desktop', width: 1280, height: 800 }, { label: '390px mobile', width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    for (const action of activityActions) {
+      await page.getByRole('button', { name: action }).click();
+      const opacityAtAnimationMidpoint = await page.locator('.sheet').evaluate(element => {
+        for (const animation of element.getAnimations()) {
+          animation.pause();
+          const duration = Number(animation.effect?.getTiming().duration) || 0;
+          animation.currentTime = duration / 2;
+        }
+        return getComputedStyle(element).opacity;
+      });
+      expect(opacityAtAnimationMidpoint).toBe('1');
+
+      const results = await new AxeBuilder({ page: page as never }).analyze();
+      expect(seriousOrCritical(results.violations), `${action} ${viewport.label} accessibility violations`).toEqual([]);
+
+      if (action === 'Make six frames') {
+        await expect(page.getByRole('region', { name: 'Six printed frames' })).toHaveAttribute('tabindex', '0');
       }
-      return getComputedStyle(element).opacity;
-    });
-    expect(opacityAtAnimationMidpoint).toBe('1');
-
-    const results = await new AxeBuilder({ page: page as never }).analyze();
-    expect(seriousOrCritical(results.violations), `${action} accessibility violations`).toEqual([]);
-
-    if (action === 'Tap a rhythm') {
-      await expect(page.getByRole('list', { name: 'Sixteen-hit rhythm tape' })).toBeVisible();
-      await expect(page.getByRole('listitem')).toHaveCount(16);
-      await expect(page.getByRole('listitem').first()).toContainText('Beat 1, empty');
-      await expect(page.locator('.beat[aria-label]')).toHaveCount(0);
+      if (action === 'Tap a rhythm') {
+        await expect(page.getByRole('list', { name: 'Sixteen-hit rhythm tape' })).toBeVisible();
+        await expect(page.getByRole('listitem')).toHaveCount(16);
+        await expect(page.getByRole('listitem').first()).toContainText('Beat 1, empty');
+        await expect(page.locator('.beat[aria-label]')).toHaveCount(0);
+      }
+      await page.getByRole('button', { name: 'Return to the front page' }).click();
     }
-    await page.getByRole('button', { name: 'Return to the front page' }).click();
   }
 });
 

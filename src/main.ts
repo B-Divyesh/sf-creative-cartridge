@@ -260,7 +260,7 @@ function openFlipCards(activity: Activity) {
     <div class="tool-row"><button type="button" data-symbol="●">Use a dot</button><button type="button" data-symbol="▲">Use a sail</button><button type="button" data-symbol="★">Use a star</button>${weekendUnlocked ? '<button type="button" data-symbol="✦">Use a Weekend spark</button>' : ''}</div>
     <div class="work-surface flip-stage"><div class="flip-object" data-flip-object aria-label="Current paper mark">●</div></div>
     <div class="tool-row"><button type="button" data-nudge="left">Move left</button><button type="button" data-nudge="up">Move up</button><button type="button" data-turn>Turn</button><button type="button" data-nudge="down">Move down</button><button type="button" data-nudge="right">Move right</button><button type="button" class="primary" data-capture>Print frame 1</button></div>
-    <div class="frame-strip" data-frames aria-label="Six printed frames"></div>
+    <div class="frame-strip" data-frames role="region" aria-label="Six printed frames" tabindex="0"></div>
     <div class="tool-row"><button type="button" data-play>Play six cards</button><button type="button" data-reset>Start the six frames again</button><button type="button" data-save>Save these cards</button></div><p class="save-line" data-save-status aria-live="polite"></p><section class="saved-shelf" data-saved-shelf></section>`);
   let symbol = '●'; let x = 0; let y = 0; let rotation = 0; let current = 0; let frames: FlipFrame[] = Array(6).fill(null); let timer: number | undefined;
   const object = sheet.querySelector<HTMLElement>('[data-flip-object]')!;
