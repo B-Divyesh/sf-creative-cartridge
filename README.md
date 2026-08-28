@@ -28,10 +28,10 @@ The exact deploy build command is `npm run build`. It creates `dist/` with `dist
 
 ```sh
 npm test              # production build + Playwright flows, Axe, offline reload
-npx tsc --noEmit      # strict TypeScript check
+npm run typecheck     # strict TypeScript check
 ```
 
-The browser tests use Playwright 1.58.2 and cover all six launch paths, PIN setup and curation, local saving, keyboard rhythm input, privacy/terms, serious/critical Axe violations, and a real offline context reload.
+The browser tests use Playwright 1.58.2 and cover all six launch paths, PIN setup and curation, local saving, keyboard rhythm input, skip-link focus, privacy/terms, serious/critical Axe scans on every activity (including its entrance), the static response policy, and a real offline context reload.
 
 ## Install and use offline
 
@@ -53,6 +53,7 @@ Core activities, local export, safety behavior, and accessibility are never paid
 - `src/main.ts` — application shell, six activities, parent controls, license flow
 - `src/db.ts` — local IndexedDB work archive and validated import
 - `scripts/generate-sw.mjs` — post-build service-worker precache generation
+- `public/staticwebapp.config.json` — immutable hashed-asset caching, manifest MIME type, and security headers
 - `.factory/design.md` — visual thesis, tokens, interaction rules, asset provenance
 - `.factory/handoff.md` — verification and release handoff
 

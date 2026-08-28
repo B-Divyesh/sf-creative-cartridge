@@ -1,77 +1,91 @@
-# Creative Cartridge — build handoff
+# Creative Cartridge — repair handoff
 
-## Independent verification disposition — **FAIL**
+Work order: `creative-cartridge-repair-1`
 
-Verified 2026-08-28 against commit
-`e7a9c9bb195678b53ff9d8d56a580a67eb76dce3` and
-<https://creative-cartridge.sociobot.in/>.
+Repaired candidate: `e7a9c9bb195678b53ff9d8d56a580a67eb76dce3`
 
-The clean install, strict type check, exact production build, and repository
-test suite passed, and live/offline deployment identity was independently
-confirmed. This is nevertheless a **FAIL**: axe found serious color-contrast
-violations in Rhythm Press, Creature Works, and Pocket Theatre, plus invalid
-ARIA labels on Rhythm Press beat `div`s. The live deployment also uses only
-`Cache-Control: public, must-revalidate, max-age=30` for hashed assets rather
-than immutable long-lived caching. See
-[`.factory/verification.md`](./verification.md) for full commands, interaction
-coverage, exact measurements, header evidence, and severity-ranked defects.
+Verifier report: `4c241702a60dcab853c09ed75af141f5b856c9f0`
 
-Work order: `creative-cartridge-build-1`
 Completed: 2026-08-28
 
-## What shipped
+## Disposition
 
-- A Vite + vanilla TypeScript PWA with a product-specific monochrome broadsheet visual system.
-- Six complete, finite child activities: Ink Orchestra (pointer/keyboard sound painting), Shape Stories, Six-card Cinema, Rhythm Press (pads plus 1–8 keys), Creature Works, and Pocket Theatre.
-- Local IndexedDB saves with per-activity shelves, clear confirmation, parent JSON export, and validated additive import.
-- Parent PIN setup/unlock (salted SHA-256 convenience gate), activity selection, empty issue state, sound choice, small-download display, install affordance, and an offline health check.
-- Versioned generated service worker with full shell precache, cache-first local assets, network handling for billing, offline navigation fallback, `skipWaiting`, client claim, and an in-app update notice.
-- PWA manifest, 192/512/maskable icons, matching splash colours, `/privacy/`, `/terms/`, robots and sitemap.
-- Weekend Ink $6 one-time unlock contract: Sociobot hosted checkout, return-token storage and URL cleanup, daily cached verification, optimistic offline access from a valid cache, revoked/invalid handling, and paste-to-restore. Core activities, export, safety, and accessibility are free.
-- Original generated broadsheet cover artwork, responsive WebP exports, source and prompt provenance in `assets/src/`, and public disclosure. The mobile file is 39 KB and the desktop file is 118 KB.
+**PASS locally.** Every high/medium/low finding in the independent report has
+been reproduced, repaired at its root, and covered by a regression test. The
+artifact remains a Vite + vanilla TypeScript offline PWA with the researched
+six-activity scope, local IndexedDB archive, parent controls, one-time Sociobot
+license integration, original broadsheet identity, and static `dist/` output.
 
-## How to run
+## Reproduction and repairs
 
-```sh
-npm install
-npm run dev
-```
+The original candidate was rebuilt in a detached worktree and scanned with
+Playwright 1.58.2 plus `@axe-core/playwright` 4.10.2:
 
-Production build/deploy command:
+- Activating the home skip link left focus on `BODY`. `main` now has
+  `tabindex="-1"` on the app and both legal pages, so fragment navigation moves
+  focus without inserting the landmark into the normal Tab order.
+- At the midpoint of the sheet entrance, Rhythm Press reproduced
+  `aria-prohibited-attr` on all 16 beat `div`s and nine `color-contrast` nodes;
+  Creature Works and Pocket Theatre each reproduced two contrast nodes. The
+  invalid beat cells are now an ordered list with visible numbers and
+  screen-reader-only descriptions. The sheet keeps its physical 220 ms rise
+  but no longer fades the entire foreground through low-contrast opacity.
+- The deployment returned `max-age=30, must-revalidate` for hashed assets and
+  the worker, and `application/octet-stream` for the manifest. The shipped
+  Azure Static Web Apps configuration now gives `/assets/*` a one-year
+  immutable cache, forces `/sw.js` to revalidate with no stored response, and
+  serves `.webmanifest` as `application/manifest+json`. It also supplies CSP,
+  Permissions-Policy, Referrer-Policy, and `nosniff` headers. The hosting config
+  is deliberately excluded from the service-worker precache.
 
-```sh
-npm run build
-```
+`tests/app.spec.ts` now pauses each activity entrance at its midpoint and runs
+the serious/critical axe gate across all six sheets; it asserts the Rhythm
+Press list semantics, home/legal skip-link focus, and the built response-policy
+contract. This makes each verifier defect fail on the old candidate and pass on
+the repair.
 
-Output is exactly `dist/`, with `dist/index.html` at its root plus `dist/privacy/index.html` and `dist/terms/index.html`.
+## Verification evidence
 
-## Verification performed
+- Exact clean install: `npm ci` — 25 packages audited, 0 vulnerabilities.
+- Strict type/static check: `npm run typecheck` — passed. There is no separate
+  lint tool in this small vanilla TypeScript project.
+- Unit/integration/browser suite: `npm test` — **11/11 passed** after its own
+  production build. It covers all six launch paths, PIN curation, IndexedDB
+  saving, keyboard rhythm input, every activity axe scan, offline reload,
+  privacy/terms, returned-license handling, and response policy.
+- Production build: `npm run build` — `dist/index.html` at the required root;
+  generated versioned worker with 18 precached app files. Initial assets are
+  35.88 KB JS + 0.76 KB helper JS raw (12.52 KB combined gzip) and 12.00 KB CSS
+  raw (3.56 KB gzip), within the 200 KB/50 KB budgets. Packaging/consumer tests
+  are not applicable to a directly deployed static PWA.
+- `npm audit --audit-level=high` — 0 vulnerabilities.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/` — HTTP 200 in 553 ms;
+  title and `lang=en` present, one h1, main landmark, zero missing image alt,
+  zero unlabeled buttons, and zero console/page errors.
+- Lighthouse 13.4.1 mobile simulation — performance **100**, accessibility
+  **100**, best practices **100**, SEO **100**; FCP 1.2 s, LCP 1.5 s, TBT 0 ms,
+  CLS 0.
+- Chromium visual/interaction review at 1440×1000 and 390×844 — one h1, six
+  activities, minimum 44 px controls, no home or activity horizontal overflow,
+  no clipping, and no console/page errors. Reduced motion changed page scrolling
+  from `smooth` to `auto`.
+- Privacy check — no external request during unlicensed desktop or mobile use;
+  no CDN, remote font, analytics, tracker, or child-data endpoint is present.
+- Offline/update — a real service-worker-controlled `context.setOffline(true)`
+  reload rendered the application and `Offline — the cartridge still works`.
+  A controlled `SW_UPDATED` message rendered `A fresh offline issue is ready.`
+  with a keyboard-operable Reload action.
 
-- `npm test`: **8 passed**. This runs a clean production build and Playwright 1.58.2 flows for all six launch paths, PIN setup/curation, IndexedDB saving, keyboard rhythm input, serious/critical Axe checks, real `context.setOffline(true)` reload, legal pages, and returned-license unlock.
-- `npx tsc --noEmit`: passed with strict TypeScript settings.
-- `npm audit --audit-level=high`: 0 vulnerabilities.
-- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173/ .factory/evidence`: passed; title present, `lang=en`, exactly one h1, main landmark, zero missing alt text, zero unlabeled buttons, zero console/page errors. Local load measured 553 ms.
-- Lighthouse 12.8.2 mobile against the production preview:
+## Deployment and live identity
 
-  | Category / metric | Result |
-  |---|---:|
-  | Performance | 100 |
-  | Accessibility | 100 |
-  | Best Practices | 100 |
-  | SEO | 100 |
-  | LCP | 1.7 s |
-  | FCP | 1.1 s |
-  | Total blocking time | 0 ms |
-  | CLS | 0 |
+Deployment and post-deploy byte/header checks are recorded here after the
+production upload.
 
-- Built initial assets: main JS 35.81 KB raw / 12.04 KB gzip; shared helper JS 0.76 KB raw; CSS 11.84 KB raw / 3.51 KB gzip. No runtime CDN, remote font, tracker, analytics, or third-party child-data request.
-- 390×844 and 1440×1000 screenshots were visually reviewed: no horizontal overflow, clipped controls, or generic-template regressions.
+## Remaining release dependency
 
-## Known gaps / release steps
-
-- The factory still needs to register the `creative-cartridge` paid product and confirm a real hosted checkout/return against its test product before release. The client contract and mocked return/verify flow are tested; no provider or product ID is embedded.
-- Install prompts are browser-controlled. When `beforeinstallprompt` is unavailable, the parent desk gives the browser-menu instruction.
-- The PIN intentionally is not an OS/browser security boundary; this is stated in the interface, README, and terms.
-
-This builder handoff is superseded by the independent **FAIL** disposition
-above; the listed accessibility and caching defects remain release blockers.
+The factory still needs to confirm that the `creative-cartridge` paid product
+is registered and exercise one real hosted checkout/return with its test
+product. The client contract and mocked valid-return flow pass; no payment
+provider is embedded. Browser install prompts remain browser-controlled, and
+the parent PIN remains an explicitly described convenience rather than a
+security boundary.
