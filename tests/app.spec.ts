@@ -87,3 +87,17 @@ test('privacy and terms are real standalone pages', async ({ page }) => {
   await page.goto('/terms/');
   await expect(page.locator('h1')).toHaveText('Terms');
 });
+
+test('returned purchase license is stored, stripped, and unlocks bonus ink', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => String(input).includes('/verify?')
+      ? Promise.resolve(new Response(JSON.stringify({ valid: true, reason: 'ok', expires_at: null }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      : originalFetch(input, init);
+  });
+  await page.goto('/?license=test-license-token');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('cc_license_verdict'))).toContain('"valid":true');
+  expect(page.url()).not.toContain('license=');
+  await page.getByRole('button', { name: /Set a story/ }).click();
+  await expect(page.getByRole('button', { name: 'Add a Weekend comet' })).toBeVisible();
+});
