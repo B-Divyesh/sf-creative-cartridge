@@ -1,0 +1,19 @@
+{
+  "name": "creative-cartridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/generate-sw.mjs",
+    "preview": "vite preview",
+    "test": "npm run build && playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.58.2",
+    "@types/node": "22.18.0",
+    "typescript": "5.9.2",
+    "vite": "7.3.6"
+  }
+}

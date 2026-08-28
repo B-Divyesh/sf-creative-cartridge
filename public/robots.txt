@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://creative-cartridge.sociobot.in/sitemap.xml
