@@ -29,9 +29,10 @@ The exact deploy build command is `npm run build`. It creates `dist/` with `dist
 ```sh
 npm test              # production build + Playwright flows, Axe, offline reload
 npm run typecheck     # strict TypeScript check
+npm run verify:billing # live checkout redirect + invalid-license API contract
 ```
 
-The browser tests use Playwright 1.58.2 and cover all six launch paths, PIN setup and curation, local saving, keyboard rhythm input, skip-link focus, privacy/terms, serious/critical Axe scans on every activity (including its entrance), the static response policy, and a real offline context reload.
+The browser tests use Playwright 1.58.2 and cover all six launch paths, PIN setup and curation, local saving, creature-name integer boundaries, 390 px footer targets, keyboard rhythm input, skip-link focus, privacy/terms, serious/critical Axe scans on every activity (including its entrance), the static response policy, and a real offline context reload. The billing check is an explicit networked release gate and requires the live Sociobot service.
 
 ## Install and use offline
 

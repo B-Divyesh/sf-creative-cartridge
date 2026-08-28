@@ -72,6 +72,34 @@ test('keyboard can make and play a rhythm', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Stop the tape' })).toBeVisible();
 });
 
+test('creature names stay complete across signed 32-bit timestamp boundaries', async ({ page }) => {
+  await page.getByRole('button', { name: 'Print a creature' }).click();
+  const boundaryValues = [2_147_483_647, 2_147_483_648, 2_147_483_649, 4_294_967_295, 4_294_967_296];
+
+  for (const timestamp of boundaryValues) {
+    await page.evaluate(value => { Date.now = () => value; }, timestamp);
+    await page.getByRole('button', { name: 'Print a name' }).click();
+    const name = await page.locator('[data-name]').textContent();
+    expect(name, `timestamp ${timestamp}`).toMatch(/^(Nibble|Rumble|Doodle|Pocket|Pepper|Wobble)(snout|foot|whistle|moth|bump|beak)$/);
+    expect(name).not.toContain('undefined');
+  }
+});
+
+test('mobile footer links meet the 44px touch-target contract', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const links = page.locator('.footer-links a');
+  await expect(links).toHaveCount(3);
+
+  for (const link of await links.all()) {
+    const label = await link.textContent() ?? 'footer link';
+    const box = await link.boundingBox();
+    expect(box, label).not.toBeNull();
+    expect(box!.width, `${label} width`).toBeGreaterThanOrEqual(44);
+    expect(box!.height, `${label} height`).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
 test('skip link transfers keyboard focus to the main content', async ({ page }) => {
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to the activities' })).toBeFocused();

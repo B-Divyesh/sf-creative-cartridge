@@ -71,7 +71,7 @@ function renderHome() {
         <section class="edition-intro" aria-labelledby="inside-heading"><h2 id="inside-heading">Inside this issue</h2><p>A parent chooses which departments appear. Each one makes a small thing and has an ending. Saved pieces live only in this browser and can be packed up from the parent desk.</p></section>
         ${visible.length ? `<section class="activity-grid" aria-label="Creative activities">${visible.map(activityCard).join('')}</section>` : emptyEdition()}
       </main>
-      <footer class="footer"><p><strong>Creative Cartridge</strong><br>A one-folder, local-first play paper. No ads, accounts, analytics, or child profiling.</p><p><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-creative-cartridge" rel="noreferrer">Source</a></p><p>Cover artwork was generated for this product with Azure AI Foundry and reviewed by the maker.</p></footer>
+      <footer class="footer"><p><strong>Creative Cartridge</strong><br>A one-folder, local-first play paper. No ads, accounts, analytics, or child profiling.</p><nav class="footer-links" aria-label="Legal and source"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-creative-cartridge" rel="noreferrer">Source</a></nav><p>Cover artwork was generated for this product with Azure AI Foundry and reviewed by the maker.</p></footer>
     </div>
     <dialog id="parent-dialog" aria-labelledby="parent-title"></dialog>
     <div id="toast-region" aria-live="polite"></div>`;
@@ -315,7 +315,13 @@ function openCreature(activity: Activity) {
   let body = 0; let eye = 0; let foot = 0; let name = 'The unnamed creature';
   const render = () => { sheet.querySelector<HTMLElement>('[data-creature]')!.innerHTML = `<span>${escapeHtml(eyes[eye])}</span><span>${escapeHtml(bodies[body])}</span><span>${escapeHtml(feet[foot])}</span>`; sheet.querySelector<HTMLElement>('[data-name]')!.textContent = name; };
   sheet.querySelectorAll<HTMLButtonElement>('[data-part]').forEach(button => button.addEventListener('click', () => { if (button.dataset.part === 'body') body = (body + 1) % bodies.length; if (button.dataset.part === 'eyes') eye = (eye + 1) % eyes.length; if (button.dataset.part === 'feet') foot = (foot + 1) % feet.length; playTone(190 + (body + eye + foot) * 35, .1, 'triangle'); render(); }));
-  sheet.querySelector('[data-new-name]')?.addEventListener('click', () => { const seed = body * 7 + eye * 3 + foot + Date.now(); name = first[seed % first.length] + last[(seed >> 2) % last.length]; render(); });
+  sheet.querySelector('[data-new-name]')?.addEventListener('click', () => {
+    const seed = body * 7 + eye * 3 + foot + Date.now();
+    // Division keeps the surname index non-negative when timestamps cross the
+    // signed 32-bit boundary; bitwise shifts coerce Date.now() to signed i32.
+    name = first[seed % first.length] + last[Math.floor(seed / 4) % last.length];
+    render();
+  });
   sheet.querySelector('[data-save]')?.addEventListener('click', async () => { if (name === 'The unnamed creature') { showSaveMessage(sheet, 'Print a name before saving this species.'); return; } try { await saveWork(makeWork(activity.id, name, { body, eye, foot })); showSaveMessage(sheet); await savedShelf(sheet, activity.id); } catch { showSaveMessage(sheet, 'This creature could not be saved. Try again after making room.'); } });
   render(); void savedShelf(sheet, activity.id);
 }
