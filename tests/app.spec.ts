@@ -170,5 +170,5 @@ test('all routes have no serious accessibility violations', async ({ page }) => 
 
 test('static deployment configuration has a designed 404 and known direct routes', async () => {
   const config = JSON.parse(await readFile('dist/staticwebapp.config.json', 'utf8')) as { routes: Array<{ route: string; rewrite?: string }>; responseOverrides: Record<string, { rewrite: string }> };
-  expect(config.responseOverrides['404'].rewrite).toBe('/404.html'); expect(config.routes.filter(route => route.rewrite === '/index.html')).toHaveLength(14);
+  expect(config.responseOverrides['404'].rewrite).toBe('/404.html'); expect(config.routes.filter(route => route.rewrite === '/index.html')).toHaveLength(13);
 });

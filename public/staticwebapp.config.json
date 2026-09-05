@@ -19,7 +19,6 @@
       }
     },
     { "route": "/demo", "rewrite": "/index.html" },
-    { "route": "/demo/", "rewrite": "/index.html" },
     { "route": "/activities/sound-paint", "rewrite": "/index.html" },
     { "route": "/activities/shape-story", "rewrite": "/index.html" },
     { "route": "/activities/flip-cards", "rewrite": "/index.html" },
