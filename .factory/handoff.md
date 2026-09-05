@@ -8,6 +8,8 @@ Live URL: <https://creative-cartridge.sociobot.in/>
 
 Implementation SHA: `64a56e023efd043e85ee5532a07d4f0b0c37598d`
 
+Documentation SHA at handoff start: `f8758036fd65b98fbc1ba37662768649487f297b`
+
 Base reviewed SHA: `3446e03ab31277868785560869af288354869086`
 
 ## What changed
