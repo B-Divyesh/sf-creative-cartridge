@@ -1,63 +1,80 @@
 # Creative Cartridge
 
-Creative Cartridge is a finite, offline creative play space for children ages 4–7 and the grown-ups setting up an older family computer. It is a small Sunday-paper-like PWA with six complete activities: sound painting, shape storytelling, a camera-free six-frame animation, rhythm pads, a creature press, and a paper shadow theatre.
+Creative Cartridge helps a parent set up six offline creative activities for a
+child ages 4–7 on an older family computer. Each activity ends with a small
+saved piece: sound painting, shape stories, six-card cinema, rhythm, creature
+printing, and paper theatre.
 
-There is no account, feed, advertising, analytics, or child profiling. Creative pieces stay in IndexedDB on the device. A parent can choose which activities appear, export/import a JSON backup, check offline readiness, and use a convenience PIN to keep settings separate from play.
-
-Live: <https://creative-cartridge.sociobot.in>
+Start at <https://creative-cartridge.sociobot.in/> or try the populated sample
+at <https://creative-cartridge.sociobot.in/demo>. The demo is isolated: its
+`demo:` localStorage keys and `demo:creative-cartridge` IndexedDB database do
+not read or write the real archive.
 
 ## Run locally
 
 Requirements: Node.js 22+ and npm.
 
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
-Vite prints the local URL. For a production-equivalent local server:
+For a production build and local preview:
 
 ```sh
 npm run build
 npm run preview
 ```
 
-The exact deploy build command is `npm run build`. It creates `dist/` with `dist/index.html`, standalone `privacy/index.html` and `terms/index.html`, and a generated versioned service worker.
+`npm run build` produces `dist/` with the PWA shell, legal pages, social card,
+designed 404 page, and versioned service worker.
 
 ## Test and verify
 
 ```sh
-npm test              # production build + Playwright flows, Axe, offline reload
-npm run typecheck     # strict TypeScript check
-npm run verify:billing # live checkout redirect + invalid-license API contract
+npm audit --audit-level=high
+npm run typecheck
+npm test
+npm run build
+npm run verify:billing
 ```
 
-The browser tests use Playwright 1.58.2 and cover all six launch paths, PIN setup and curation, local saving, creature-name integer boundaries, 390 px footer targets, keyboard rhythm input, skip-link focus, privacy/terms, serious/critical Axe scans on every activity (including its entrance), the static response policy, and a real offline context reload. The billing check is an explicit networked release gate and requires the live Sociobot service.
+Every visitor-facing claim is listed in `.factory/claims.json`. Run the listed
+commands from a clean checkout; each one starts from `/demo` and checks an
+observable result. The billing command contacts the live Sociobot checkout and
+verification endpoints. The browser suite also scans the landing page and all
+six activity routes for serious or critical accessibility issues.
 
 ## Install and use offline
 
-1. Open the app online once and wait for “Ready offline” in the top status ribbon.
-2. Use the browser’s Install command (or the install button in the parent desk when supported).
-3. Disconnect and reopen the installed app. Activities and existing saves remain available.
-4. Use Parent desk → Export when you want a portable backup. Browser/site-data cleanup can erase local work.
+1. Open the app online once and wait for **Ready offline**.
+2. Use the browser's Install command when it is available.
+3. Reopen it offline and choose an activity.
+4. Export a JSON backup from Parent desk when you want a copy.
 
-The parent PIN is deliberately described as a convenience, not a security boundary. Use an operating-system child account if the device also has a general browser.
+Saved pieces persist in the local browser. Browser-site-data cleanup can erase
+them. Parent desk can import valid JSON pieces, permanently clear the archive,
+choose the visible activities, and hide the cover art for a small-download
+display. The four-digit parent PIN is a convenience setting; it stores a
+one-way hash and is not device security.
 
-## Optional one-time unlock
+## Weekend Ink
 
-Weekend Ink is a $6 USD one-time pack of extra prompts and stamps. Checkout and license verification use the Sociobot billing API; the app never embeds a payment provider. Returned licenses are stored under `sb_license:creative-cartridge`, verified no more than daily, and used optimistically from a cached valid verdict offline. The factory registers/switches the product configuration at release.
+Weekend Ink costs $6 USD once. It adds extra prompts and paper stamps. The
+hosted Sociobot/Dodo checkout returns a license token; the app stores it,
+removes it from the URL, checks it at most once a day, and uses its cached
+valid status offline. Core activities, archive controls, safety behavior, and
+accessibility remain free.
 
-Core activities, local export, safety behavior, and accessibility are never paid features.
+## Privacy and project files
 
-## Project map
+Normal demo use makes no off-origin requests. Creative Cartridge does not use
+third-party runtime scripts. The privacy notice is at `/privacy/`, purchase
+terms are at `/terms/`, and the project is MIT licensed.
 
-- `src/main.ts` — application shell, six activities, parent controls, license flow
-- `src/db.ts` — local IndexedDB work archive and validated import
-- `scripts/generate-sw.mjs` — post-build service-worker precache generation
-- `public/staticwebapp.config.json` — immutable hashed-asset caching, manifest MIME type, and security headers
-- `.factory/design.md` — visual thesis, tokens, interaction rules, asset provenance
-- `.factory/handoff.md` — verification and release handoff
-
-## Privacy and license
-
-The product privacy notice is at `/privacy/`, purchase/use terms are at `/terms/`, and the source is MIT licensed. The original generated cover source and prompt are kept in `assets/src/`.
+- `src/main.ts` — app shell, routes, activities, Parent desk, and license flow
+- `src/db.ts` — normal and isolated demo IndexedDB archive
+- `scripts/generate-sw.mjs` — versioned precache service worker
+- `.factory/demo.md` — sample data and isolation contract
+- `.factory/claims.json` — public claim inventory and commands
+- `.factory/design.md` — visual system and generated-art provenance

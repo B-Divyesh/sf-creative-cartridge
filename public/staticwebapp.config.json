@@ -17,14 +17,26 @@
       "headers": {
         "Cache-Control": "public, max-age=3600, must-revalidate"
       }
-    }
+    },
+    { "route": "/demo", "rewrite": "/index.html" },
+    { "route": "/demo/", "rewrite": "/index.html" },
+    { "route": "/activities/sound-paint", "rewrite": "/index.html" },
+    { "route": "/activities/shape-story", "rewrite": "/index.html" },
+    { "route": "/activities/flip-cards", "rewrite": "/index.html" },
+    { "route": "/activities/rhythm-press", "rewrite": "/index.html" },
+    { "route": "/activities/creature-works", "rewrite": "/index.html" },
+    { "route": "/activities/shadow-page", "rewrite": "/index.html" },
+    { "route": "/demo/activities/sound-paint", "rewrite": "/index.html" },
+    { "route": "/demo/activities/shape-story", "rewrite": "/index.html" },
+    { "route": "/demo/activities/flip-cards", "rewrite": "/index.html" },
+    { "route": "/demo/activities/rhythm-press", "rewrite": "/index.html" },
+    { "route": "/demo/activities/creature-works", "rewrite": "/index.html" },
+    { "route": "/demo/activities/shadow-page", "rewrite": "/index.html" }
   ],
-  "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": [
-      "/assets/*",
-      "/*.{css,js,png,jpg,jpeg,svg,webp,avif,ico,woff,woff2,json,webmanifest,txt,xml,wasm}"
-    ]
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/404.html"
+    }
   },
   "globalHeaders": {
     "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.sociobot.in; media-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://api.sociobot.in; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests",

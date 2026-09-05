@@ -1,10 +1,16 @@
 import './styles.css';
 
+declare const __BUILD_ID__: string;
+
 const isPrivacy = location.pathname.startsWith('/privacy');
 const target = document.querySelector<HTMLDivElement>('#legal');
 if (!target) throw new Error('Legal page could not start.');
 
-target.innerHTML = isPrivacy ? `
+const buildId = __BUILD_ID__;
+const frameStart = `<div class="shell"><header class="masthead"><div class="masthead-top"><a class="wordmark" href="/">Creative Cartridge</a><nav aria-label="Main navigation"><a href="/">Home</a><a href="/demo">Try sample</a><a href="/privacy/">Privacy</a></nav></div><p class="masthead-note">Six finite creative activities for an older family computer</p></header>`;
+const frameEnd = `<footer class="footer"><p><strong>Creative Cartridge</strong><br>Offline creative play for ages 4–7. No account or feed.</p><nav class="footer-links" aria-label="Legal and source"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-creative-cartridge" rel="noreferrer">Source <span class="visually-hidden">(opens in a new tab)</span></a></nav><p>Built by Param Factory<br>Build ${buildId}</p></footer></div>`;
+
+target.innerHTML = isPrivacy ? `${frameStart}
   <main id="main" class="legal" tabindex="-1">
     <header><p class="kicker">The plain-language edition · Updated 28 August 2026</p><h1>Privacy</h1></header>
     <p><strong>Creative Cartridge does not collect child data.</strong> There are no accounts, ads, trackers, analytics, social features, or third-party runtime scripts.</p>
@@ -19,7 +25,7 @@ target.innerHTML = isPrivacy ? `
     <h2>Contact</h2>
     <p>Questions can be sent to <a href="mailto:privacy@sociobot.in">privacy@sociobot.in</a>.</p>
     <p><a href="/">Return to Creative Cartridge</a> · <a href="/terms/">Read the terms</a></p>
-  </main>` : `
+  </main>${frameEnd}` : `${frameStart}
   <main id="main" class="legal" tabindex="-1">
     <header><p class="kicker">The plain-language edition · Updated 28 August 2026</p><h1>Terms</h1></header>
     <p>Creative Cartridge is a finite creative play space for family use. A parent or guardian should install and configure it for a child.</p>
@@ -34,4 +40,4 @@ target.innerHTML = isPrivacy ? `
     <h2>Fair use</h2>
     <p>Do not attempt to disrupt the hosted licensing service or redistribute a purchased license. You may inspect, modify, and redistribute the open-source application under its license.</p>
     <p><a href="/">Return to Creative Cartridge</a> · <a href="/privacy/">Read privacy</a></p>
-  </main>`;
+  </main>${frameEnd}`;

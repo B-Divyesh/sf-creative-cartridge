@@ -1,5 +1,7 @@
 import './styles.css';
-import { clearWorks, deleteWork, getWorks, importWorks, makeWork, saveWork, type Work } from './db';
+import { clearWorks, deleteWork, getWorks, importWorks, makeWork, saveWork, setStorageNamespace, type Work } from './db';
+
+declare const __BUILD_ID__: string;
 
 type ActivityId = 'sound-paint' | 'shape-story' | 'flip-cards' | 'rhythm-press' | 'creature-works' | 'shadow-page';
 type Activity = { id: ActivityId; number: string; title: string; deck: string; action: string };
@@ -21,15 +23,38 @@ const VERDICT_KEY = 'cc_license_verdict';
 const SMALL_KEY = 'cc_small_download';
 const SOUND_KEY = 'cc_sound';
 const API_BASE = 'https://api.sociobot.in/api/v1';
+const BUILD_ID = __BUILD_ID__;
+
+const DEMO_PREFIX = 'demo:';
+const requestedDemo = location.pathname === '/demo' || location.pathname.startsWith('/demo/') || new URLSearchParams(location.search).get('demo') === '1';
+if (requestedDemo && !location.pathname.startsWith('/demo')) history.replaceState(null, '', '/demo');
+const demoMode = location.pathname === '/demo' || location.pathname.startsWith('/demo/');
+setStorageNamespace(demoMode ? DEMO_PREFIX : '');
+
+const storage = {
+  getItem(key: string) { return localStorage.getItem(demoMode ? `${DEMO_PREFIX}${key}` : key); },
+  setItem(key: string, value: string) { localStorage.setItem(demoMode ? `${DEMO_PREFIX}${key}` : key, value); },
+  removeItem(key: string) { localStorage.removeItem(demoMode ? `${DEMO_PREFIX}${key}` : key); }
+};
+
+const sampleWorks: Work[] = [
+  { id: 'sample-sound-paint', activity: 'sound-paint', title: 'Rainy-day sound painting', createdAt: '2026-08-31T09:12:00.000Z', data: { sample: true } },
+  { id: 'sample-shape-story', activity: 'shape-story', title: 'Shape story with 4 pieces', createdAt: '2026-08-31T09:20:00.000Z', data: { sample: true } },
+  { id: 'sample-flip-cards', activity: 'flip-cards', title: '6-card cinema', createdAt: '2026-08-31T09:28:00.000Z', data: { sample: true } },
+  { id: 'sample-rhythm-press', activity: 'rhythm-press', title: '8-hit rhythm', createdAt: '2026-08-31T09:36:00.000Z', data: { sample: true } },
+  { id: 'sample-creature-works', activity: 'creature-works', title: 'Wobblebeak', createdAt: '2026-08-31T09:44:00.000Z', data: { sample: true } },
+  { id: 'sample-shadow-page', activity: 'shadow-page', title: 'night pocket theatre', createdAt: '2026-08-31T09:52:00.000Z', data: { sample: true } }
+];
 
 const app = document.querySelector<HTMLDivElement>('#app') as HTMLDivElement;
 if (!app) throw new Error('Creative Cartridge could not start.');
 
 let selected = readSelected();
 let activeCleanup: (() => void) | undefined;
+let closeActiveSheet: (() => void) | undefined;
 let installPrompt: BeforeInstallPromptEvent | undefined;
 let audioContext: AudioContext | undefined;
-let soundOn = localStorage.getItem(SOUND_KEY) !== 'off';
+let soundOn = storage.getItem(SOUND_KEY) !== 'off';
 let weekendUnlocked = readVerdict()?.valid === true;
 
 interface BeforeInstallPromptEvent extends Event {
@@ -39,47 +64,108 @@ interface BeforeInstallPromptEvent extends Event {
 
 function readSelected(): ActivityId[] {
   try {
-    const value = JSON.parse(localStorage.getItem(SELECTED_KEY) ?? 'null');
+    const value = JSON.parse(storage.getItem(SELECTED_KEY) ?? 'null');
     if (Array.isArray(value)) return value.filter((id): id is ActivityId => ACTIVITY_IDS.includes(id));
   } catch { /* use the complete issue */ }
   return [...ACTIVITY_IDS];
 }
 
 function readVerdict(): { valid: boolean; checkedAt: number; reason?: string } | undefined {
-  try { return JSON.parse(localStorage.getItem(VERDICT_KEY) ?? 'null') ?? undefined; } catch { return undefined; }
+  try { return JSON.parse(storage.getItem(VERDICT_KEY) ?? 'null') ?? undefined; } catch { return undefined; }
 }
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char] ?? char);
 }
 
+function headerMarkup() {
+  return `<header class="masthead"><div class="masthead-top"><a class="wordmark" href="/">Creative Cartridge</a><nav aria-label="Main navigation"><a href="/">Home</a><a href="/demo">Try sample</a><a href="/privacy/">Privacy</a></nav><button class="utility-button" id="parent-open" type="button">Parent desk</button></div><p class="masthead-note">Six finite creative activities for an older family computer</p></header>`;
+}
+
+function footerMarkup() {
+  return `<footer class="footer"><p><strong>Creative Cartridge</strong><br>Offline creative play for ages 4–7. No account or feed.</p><nav class="footer-links" aria-label="Legal and source"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-creative-cartridge" rel="noreferrer">Source <span class="visually-hidden">(opens in a new tab)</span></a></nav><p>Built by Param Factory<br>Build ${escapeHtml(BUILD_ID)}</p></footer>`;
+}
+
+function samplePreview() {
+  return `<section class="sample-preview" aria-labelledby="sample-heading"><div><p class="kicker">Sample week</p><h2 id="sample-heading">Six saved sample pieces</h2><p>Open any activity to change the sample. Your changes stay in this demo.</p></div><ul>${sampleWorks.map(work => `<li><strong>${escapeHtml(work.title)}</strong><span>${escapeHtml(activities.find(item => item.id === work.activity)?.title ?? 'Activity')}</span></li>`).join('')}</ul></section>`;
+}
+
 function renderHome() {
-  document.body.classList.toggle('small-download', localStorage.getItem(SMALL_KEY) === 'on');
+  document.body.classList.toggle('small-download', storage.getItem(SMALL_KEY) === 'on');
+  document.body.classList.toggle('demo-mode', demoMode);
   const visible = activities.filter(item => selected.includes(item.id));
+  const heroTitle = demoMode ? 'Try six offline creative activities' : 'Set up offline creative play';
+  const heroText = demoMode
+    ? 'This sample has six saved pieces for a child and grown-up to explore together.'
+    : 'For parents setting up an older computer for a child ages 4–7.';
   app.innerHTML = `
     <div class="shell">
-      <header class="masthead">
-        <div class="masthead-top"><span>A finite creative paper for old computers</span><button class="utility-button" id="parent-open" type="button">Parent desk</button></div>
-        <div class="masthead-title"><h1>Creative<br>Cartridge</h1><p class="issue-mark">Issue No. 1<br>Six things to make<br>No feed inside</p></div>
-      </header>
-      <div class="status-ribbon" aria-live="polite"><span class="online-state" id="network-state">Checking this copy…</span><span id="save-summary">Everything made here stays on this device.</span></div>
+      ${headerMarkup()}
+      <div class="status-ribbon" aria-live="polite"><span class="online-state" id="network-state">Checking this copy…</span><span id="save-summary">Creative work stays in this browser.</span></div>
       <main id="main" tabindex="-1">
-        <section class="hero" aria-labelledby="cover-heading">
-          <picture><source media="(max-width: 760px)" srcset="/art/press-cartridge-800.webp"><img src="/art/press-cartridge-1280.webp" width="1280" height="853" fetchpriority="high" alt="A cardboard cartridge spilling paper shapes, rhythm dots, flip cards, a creature and a small theatre onto newsprint."></picture>
-          <div class="hero-copy"><p class="kicker">Made for ages 4–7 and their grown-ups</p><h2 id="cover-heading">Open the paper. Make something.</h2><p>Six small creative activities. Nothing to scroll, no account to make, and no internet needed after this copy is ready.</p><button class="primary" type="button" data-start-first>Start with today’s first activity</button></div>
+        <section class="hero" aria-labelledby="home-title">
+          <div class="hero-copy"><p class="kicker">${demoMode ? 'Sample data' : 'For ages 4–7 and their grown-ups'}</p><h1 id="home-title" tabindex="-1">${heroTitle}</h1><p>${heroText}</p>${demoMode ? '<p class="first-action-note">Open an activity to see a finished sample and make a new piece.</p>' : '<div class="hero-actions"><a class="button primary" href="/demo">Try it with sample data</a><span>See six saved sample pieces. Nothing is saved to your real archive.</span></div><ul class="plain-facts"><li>Works offline after the first visit.</li><li>No account, feed, or tracking.</li><li>Weekend Ink costs $6 once.</li></ul>'}</div>
+          <picture><source media="(max-width: 760px)" srcset="/art/press-cartridge-800.webp"><img src="/art/press-cartridge-1280.webp" width="1280" height="853" fetchpriority="high" alt="A cardboard cartridge with paper shapes, rhythm dots, flip cards, a creature, and a small theatre."></picture>
         </section>
-        <section class="edition-intro" aria-labelledby="inside-heading"><h2 id="inside-heading">Inside this issue</h2><p>A parent chooses which departments appear. Each one makes a small thing and has an ending. Saved pieces live only in this browser and can be packed up from the parent desk.</p></section>
+        ${demoMode ? samplePreview() : ''}
+        <section class="edition-intro" aria-labelledby="inside-heading"><h2 id="inside-heading">Choose an activity</h2><p>A parent can choose which activities appear. Each activity ends with a small saved piece.</p></section>
         ${visible.length ? `<section class="activity-grid" aria-label="Creative activities">${visible.map(activityCard).join('')}</section>` : emptyEdition()}
+        <section class="how-it-works" aria-labelledby="how-heading"><h2 id="how-heading">How it works</h2><ol><li><strong>Install once.</strong> Wait for the ready message while online.</li><li><strong>Choose activities.</strong> Use Parent desk to show the finite set.</li><li><strong>Make and save.</strong> Pieces stay in this browser until a parent exports or clears them.</li></ol></section>
+        <section class="privacy-summary" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What it does not do</h2><p>Creative Cartridge does not browse the web, recommend more content, collect child data, or show advertising.</p><a href="/privacy/">Read the privacy details</a></section>
+        <section class="price-summary" aria-labelledby="price-heading"><h2 id="price-heading">Weekend Ink — $6 USD once</h2><p>Optional extra prompts and paper stamps. Core activities, export, safety controls, and accessibility stay free.</p><button type="button" data-open-parent>See Weekend Ink options</button></section>
       </main>
-      <footer class="footer"><p><strong>Creative Cartridge</strong><br>A one-folder, local-first play paper. No ads, accounts, analytics, or child profiling.</p><nav class="footer-links" aria-label="Legal and source"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="https://github.com/B-Divyesh/sf-creative-cartridge" rel="noreferrer">Source</a></nav><p>Cover artwork was generated for this product with Azure AI Foundry and reviewed by the maker.</p></footer>
+      ${footerMarkup()}
     </div>
     <dialog id="parent-dialog" aria-labelledby="parent-title"></dialog>
     <div id="toast-region" aria-live="polite"></div>`;
 
   app.querySelector('#parent-open')?.addEventListener('click', openParentDesk);
-  app.querySelector('[data-start-first]')?.addEventListener('click', () => visible[0] ? openActivity(visible[0].id) : openParentDesk());
-  app.querySelectorAll<HTMLButtonElement>('[data-activity]').forEach(button => button.addEventListener('click', () => openActivity(button.dataset.activity as ActivityId)));
+  app.querySelector('[data-open-parent]')?.addEventListener('click', openParentDesk);
+  app.querySelectorAll<HTMLButtonElement>('[data-activity]').forEach(button => button.addEventListener('click', () => navigateToActivity(button.dataset.activity as ActivityId)));
   updateNetworkState();
+  ensureDemoBanner();
+}
+
+function ensureDemoBanner() {
+  document.querySelector('#demo-banner')?.remove();
+  if (!demoMode) return;
+  const banner = document.createElement('aside');
+  banner.id = 'demo-banner';
+  banner.setAttribute('aria-label', 'Demo controls');
+  banner.innerHTML = '<strong>Demo — sample data, nothing is saved</strong><span>Changes stay separate from your real archive.</span><button type="button" data-reset-demo>Reset demo</button><button type="button" data-start-real>Start for real</button>';
+  document.body.append(banner);
+  banner.querySelector('[data-reset-demo]')?.addEventListener('click', () => { void resetDemo(); });
+  banner.querySelector('[data-start-real]')?.addEventListener('click', () => { void startForReal(); });
+}
+
+async function clearDemoLocalStorage() {
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith(DEMO_PREFIX)) localStorage.removeItem(key);
+  }
+}
+
+async function seedDemo() {
+  if (!demoMode) return;
+  const existing = await getWorks();
+  if (!existing.length) await Promise.all(sampleWorks.map(work => saveWork({ ...work })));
+  if (!storage.getItem(SELECTED_KEY)) storage.setItem(SELECTED_KEY, JSON.stringify(ACTIVITY_IDS));
+  selected = readSelected();
+}
+
+async function resetDemo() {
+  await clearWorks();
+  await clearDemoLocalStorage();
+  await seedDemo();
+  closeActiveSheet?.();
+  renderHome();
+  showToast('The six sample pieces are ready again.');
+}
+
+async function startForReal() {
+  await clearWorks();
+  await clearDemoLocalStorage();
+  location.assign('/');
 }
 
 function activityCard(activity: Activity) {
@@ -99,30 +185,80 @@ function updateNetworkState() {
   document.querySelector('#empty-parent')?.addEventListener('click', openParentDesk);
 }
 
+function activityPath(id: ActivityId) {
+  return `${demoMode ? '/demo' : ''}/activities/${id}`;
+}
+
+function activityFromPath() {
+  const prefix = demoMode ? '/demo/activities/' : '/activities/';
+  if (!location.pathname.startsWith(prefix)) return undefined;
+  const id = location.pathname.slice(prefix.length) as ActivityId;
+  return ACTIVITY_IDS.includes(id) ? id : undefined;
+}
+
+function navigateTo(path: string) {
+  history.pushState(null, '', path);
+  renderRoute(true);
+}
+
+function navigateToActivity(id: ActivityId) {
+  navigateTo(activityPath(id));
+}
+
+function focusRouteHeading() {
+  window.setTimeout(() => (document.querySelector<HTMLElement>('.sheet h1, #home-title, #not-found-title')?.focus()), 0);
+}
+
+function renderNotFound() {
+  app.innerHTML = `<div class="shell"><header class="masthead"><div class="masthead-top"><a class="wordmark" href="/">Creative Cartridge</a><nav aria-label="Main navigation"><a href="/">Home</a><a href="/demo">Try sample</a><a href="/privacy/">Privacy</a></nav></div></header><main id="main" tabindex="-1" class="not-found"><p class="kicker">Page not found</p><h1 id="not-found-title" tabindex="-1">This page is not in the cartridge</h1><p>Choose the front page to return to the six offline creative activities.</p><a class="button primary" href="/">Go to the front page</a></main>${footerMarkup()}</div>`;
+  document.title = 'Page not found — Creative Cartridge';
+  focusRouteHeading();
+}
+
+function renderRoute(moveFocus = false) {
+  closeActiveSheet?.();
+  closeActiveSheet = undefined;
+  const id = activityFromPath();
+  const isHome = location.pathname === '/' || location.pathname === '/demo';
+  const isActivityPath = location.pathname.includes('/activities/');
+  if (!isHome && !id && !isActivityPath) {
+    renderNotFound();
+    return;
+  }
+  if (isActivityPath && !id) {
+    renderNotFound();
+    return;
+  }
+  renderHome();
+  document.title = id ? `${activities.find(activity => activity.id === id)?.title} — Creative Cartridge` : demoMode ? 'Demo — Creative Cartridge' : 'Creative Cartridge — set up offline creative play';
+  if (id) openActivity(id, true);
+  else if (moveFocus) focusRouteHeading();
+}
+
 function makeSheet(activity: Activity, body: string) {
   activeCleanup?.();
+  const homeHeading = app.querySelector<HTMLHeadingElement>('#home-title');
+  if (homeHeading) homeHeading.outerHTML = `<p class="home-title-placeholder">${escapeHtml(homeHeading.textContent ?? '')}</p>`;
   const sheet = document.createElement('section');
   sheet.className = 'sheet';
   sheet.setAttribute('role', 'dialog');
   sheet.setAttribute('aria-modal', 'true');
   sheet.setAttribute('aria-labelledby', 'activity-title');
-  sheet.innerHTML = `<div class="sheet-head"><div><p class="kicker">Department ${activity.number} of 06</p><h2 id="activity-title">${activity.title}</h2><p>${activity.deck}</p></div><button type="button" data-close-sheet>Return to the front page</button></div><div class="sheet-body">${body}</div>`;
+  sheet.innerHTML = `<div class="sheet-head"><div><p class="kicker">Activity ${activity.number} of 06</p><h1 id="activity-title" tabindex="-1">${activity.title}</h1><p>${activity.deck}</p></div><button type="button" data-close-sheet>Return to the front page</button></div><div class="sheet-body">${body}</div>`;
   document.body.append(sheet);
   app.inert = true;
   document.body.style.overflow = 'hidden';
-  history.replaceState(null, '', `#${activity.id}`);
   const close = () => {
     activeCleanup?.();
     activeCleanup = undefined;
     sheet.remove();
     app.inert = false;
     document.body.style.overflow = '';
-    history.replaceState(null, '', location.pathname + location.search);
-    document.querySelector<HTMLButtonElement>(`[data-activity="${activity.id}"]`)?.focus();
   };
-  sheet.querySelector('[data-close-sheet]')?.addEventListener('click', close);
+  closeActiveSheet = close;
+  sheet.querySelector('[data-close-sheet]')?.addEventListener('click', () => navigateTo(demoMode ? '/demo' : '/'));
   sheet.addEventListener('keydown', event => {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') navigateTo(demoMode ? '/demo' : '/');
     if (event.key === 'Tab') {
       const focusable = Array.from(sheet.querySelectorAll<HTMLElement>('button:not(:disabled), [href], input:not(:disabled), [tabindex]:not([tabindex="-1"])'));
       const first = focusable[0]; const last = focusable.at(-1);
@@ -130,13 +266,17 @@ function makeSheet(activity: Activity, body: string) {
       if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }
   });
-  sheet.querySelector<HTMLButtonElement>('[data-close-sheet]')?.focus();
+  focusRouteHeading();
   return sheet;
 }
 
-function openActivity(id: ActivityId) {
+function openActivity(id: ActivityId, fromRoute = false) {
   const activity = activities.find(item => item.id === id);
   if (!activity) return;
+  if (!fromRoute) {
+    navigateToActivity(id);
+    return;
+  }
   if (id === 'sound-paint') openSoundPaint(activity);
   if (id === 'shape-story') openShapeStory(activity);
   if (id === 'flip-cards') openFlipCards(activity);
@@ -215,7 +355,7 @@ function openSoundPaint(activity: Activity) {
   canvas.addEventListener('keydown', event => { const moves: Record<string, [number, number]> = { ArrowLeft: [-14, 0], ArrowRight: [14, 0], ArrowUp: [0, -14], ArrowDown: [0, 14] }; if (moves[event.key]) { event.preventDefault(); const [x, y] = moves[event.key]; last = { x: Math.max(0, Math.min(canvas.width, last.x + x)), y: Math.max(0, Math.min(canvas.height, last.y + y)) }; } if (event.code === 'Space') { event.preventDefault(); draw(last, true); } });
   sheet.querySelectorAll<HTMLButtonElement>('[data-ink]').forEach(button => button.addEventListener('click', () => { ink = button.dataset.ink!; tone = Number(button.dataset.tone); sheet.querySelectorAll('[data-ink]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); }));
   sheet.querySelector('[data-clear]')?.addEventListener('click', () => { if (confirm('Clear every mark from this page?')) { context.fillStyle = '#fffbed'; context.fillRect(0, 0, canvas.width, canvas.height); showSaveMessage(sheet, 'The page is clear.'); } });
-  sheet.querySelector('[data-sound]')?.addEventListener('click', event => { soundOn = !soundOn; localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); (event.currentTarget as HTMLButtonElement).textContent = soundOn ? 'Pause sound' : 'Turn sound on'; showSaveMessage(sheet, soundOn ? 'Sound is on.' : 'Sound is paused.'); });
+  sheet.querySelector('[data-sound]')?.addEventListener('click', event => { soundOn = !soundOn; storage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); (event.currentTarget as HTMLButtonElement).textContent = soundOn ? 'Pause sound' : 'Turn sound on'; showSaveMessage(sheet, soundOn ? 'Sound is on.' : 'Sound is paused.'); });
   sheet.querySelector('[data-save]')?.addEventListener('click', async () => { try { await saveWork(makeWork(activity.id, 'Sound painting', { image: canvas.toDataURL('image/webp', .65) })); showSaveMessage(sheet); await savedShelf(sheet, activity.id); } catch { showSaveMessage(sheet, 'This painting could not be saved. Export older work or free some browser storage.'); } });
   void savedShelf(sheet, activity.id);
 }
@@ -297,7 +437,7 @@ function openRhythm(activity: Activity) {
   const stop = () => { if (timer) clearInterval(timer); timer = undefined; playIndex = -1; sheet.querySelector<HTMLButtonElement>('[data-play]')!.textContent = 'Play the tape once'; };
   sheet.querySelector('[data-play]')?.addEventListener('click', () => { if (timer) { stop(); return; } if (!pattern.length) { showSaveMessage(sheet, 'Tap one pad before playing the tape.'); return; } playIndex = 0; sheet.querySelector<HTMLButtonElement>('[data-play]')!.textContent = 'Stop the tape'; hit(pattern[0], false); timer = window.setInterval(() => { playIndex += 1; if (playIndex >= pattern.length) { stop(); return; } hit(pattern[playIndex], false); }, 260); });
   sheet.querySelector('[data-clear]')?.addEventListener('click', () => { if (!pattern.length || confirm('Clear every hit from this tape?')) { stop(); pattern = []; render(); showSaveMessage(sheet, 'The tape is empty.'); } });
-  sheet.querySelector('[data-sound]')?.addEventListener('click', event => { soundOn = !soundOn; localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); (event.currentTarget as HTMLButtonElement).textContent = soundOn ? 'Pause sound' : 'Turn sound on'; showSaveMessage(sheet, soundOn ? 'Sound is on.' : 'Sound is paused.'); });
+  sheet.querySelector('[data-sound]')?.addEventListener('click', event => { soundOn = !soundOn; storage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); (event.currentTarget as HTMLButtonElement).textContent = soundOn ? 'Pause sound' : 'Turn sound on'; showSaveMessage(sheet, soundOn ? 'Sound is on.' : 'Sound is paused.'); });
   sheet.querySelector('[data-save]')?.addEventListener('click', async () => { if (!pattern.length) { showSaveMessage(sheet, 'Tap one pad before saving.'); return; } try { await saveWork(makeWork(activity.id, `${pattern.length}-hit rhythm`, { pattern })); showSaveMessage(sheet); await savedShelf(sheet, activity.id); } catch { showSaveMessage(sheet, 'This rhythm could not be saved. Try again after making room.'); } });
   activeCleanup = stop; render(); void savedShelf(sheet, activity.id);
 }
@@ -350,7 +490,7 @@ async function pinHash(pin: string) {
 function openParentDesk() {
   const dialog = document.querySelector<HTMLDialogElement>('#parent-dialog');
   if (!dialog) return;
-  const hasPin = Boolean(localStorage.getItem(PIN_KEY));
+  const hasPin = Boolean(storage.getItem(PIN_KEY));
   dialog.innerHTML = `<div class="dialog-head"><div><p class="kicker">Grown-ups only</p><h2 id="parent-title">${hasPin ? 'Open the parent desk' : 'Set the parent PIN'}</h2></div><button type="button" data-dialog-close aria-label="Close parent desk">Close</button></div><div class="dialog-body">
     <p>${hasPin ? 'Enter the four digits chosen on this device.' : 'Choose four digits a child is unlikely to guess. This separates settings from play, but it is not a security boundary.'}</p>
     <form data-pin-form><div class="field"><label for="parent-pin">${hasPin ? 'Parent PIN' : 'New four-digit PIN'}</label><input id="parent-pin" name="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="off" required aria-describedby="pin-help"></div><p id="pin-help" class="instruction">Four numbers, stored only as a one-way hash in this browser.</p><button class="primary" type="submit">${hasPin ? 'Open the desk' : 'Set PIN and open'}</button><p class="error" data-pin-error role="alert"></p></form>
@@ -363,8 +503,8 @@ function openParentDesk() {
     const pin = new FormData(event.currentTarget as HTMLFormElement).get('pin')?.toString() ?? '';
     if (!/^\d{4}$/.test(pin)) { dialog.querySelector<HTMLElement>('[data-pin-error]')!.textContent = 'Enter exactly four numbers.'; return; }
     const hash = await pinHash(pin);
-    if (hasPin && hash !== localStorage.getItem(PIN_KEY)) { dialog.querySelector<HTMLElement>('[data-pin-error]')!.textContent = 'That PIN did not match. Try the four digits set on this device.'; return; }
-    if (!hasPin) localStorage.setItem(PIN_KEY, hash);
+    if (hasPin && hash !== storage.getItem(PIN_KEY)) { dialog.querySelector<HTMLElement>('[data-pin-error]')!.textContent = 'That PIN did not match. Try the four digits set on this device.'; return; }
+    if (!hasPin) storage.setItem(PIN_KEY, hash);
     await renderParentDesk(dialog);
   });
   dialog.showModal();
@@ -374,14 +514,14 @@ function openParentDesk() {
 async function renderParentDesk(dialog: HTMLDialogElement) {
   const works = await getWorks().catch(() => [] as Work[]);
   const verdict = readVerdict();
-  const license = localStorage.getItem(LICENSE_KEY);
+  const license = storage.getItem(LICENSE_KEY);
   const storageWorks = works.length === 1 ? '1 saved piece' : `${works.length} saved pieces`;
   dialog.innerHTML = `<div class="dialog-head"><div><p class="kicker">Settings & local archive</p><h2 id="parent-title">Parent desk</h2></div><button type="button" data-dialog-close aria-label="Close parent desk">Close</button></div><div class="dialog-body">
     <h3>Publish this issue</h3><p>Choose the finite set that appears on the front page. All six remain installed on this device.</p>
     <fieldset class="check-list"><legend class="kicker">Included departments</legend>${activities.map(item => `<label><input type="checkbox" value="${item.id}" ${selected.includes(item.id) ? 'checked' : ''}> ${item.number} · ${item.title}</label>`).join('')}</fieldset>
     <div class="tool-row"><button class="primary" type="button" data-save-selection>Publish these departments</button></div><p class="save-line" data-parent-status aria-live="polite"></p>
     <h3>Offline health check</h3><ul class="health-list"><li><span>App shell</span><strong class="${navigator.serviceWorker?.controller ? 'health-good' : 'health-warn'}">${navigator.serviceWorker?.controller ? 'Cached and ready' : 'Preparing — stay online once'}</strong></li><li><span>Connection now</span><strong class="${navigator.onLine ? 'health-good' : 'health-warn'}">${navigator.onLine ? 'Online' : 'Offline (activities still work)'}</strong></li><li><span>Local archive</span><strong class="health-good">${storageWorks}</strong></li><li><span>Runtime tracking</span><strong class="health-good">None</strong></li></ul>
-    <div class="tool-row"><button type="button" data-install ${installPrompt ? '' : 'disabled'}>${installPrompt ? 'Install on this computer' : 'Use the browser menu to install'}</button><label><input type="checkbox" data-small ${localStorage.getItem(SMALL_KEY) === 'on' ? 'checked' : ''}> Small-download display (hide cover art)</label></div>
+    <div class="tool-row"><button type="button" data-install ${installPrompt ? '' : 'disabled'}>${installPrompt ? 'Install on this computer' : 'Use the browser menu to install'}</button><label><input type="checkbox" data-small ${storage.getItem(SMALL_KEY) === 'on' ? 'checked' : ''}> Small-download display (hide cover art)</label></div>
     <h3>Own the archive</h3><p>Export makes one JSON backup. Import adds valid pieces without deleting what is here.</p><div class="tool-row"><button type="button" data-export ${works.length ? '' : 'disabled'}>Export ${storageWorks}</button><label class="button">Import a backup<input type="file" data-import accept="application/json" hidden></label><button type="button" class="danger" data-clear-all ${works.length ? '' : 'disabled'}>Clear all saved pieces</button></div>
     <h3>Weekend Ink — $6 USD once</h3><p>Extra story prompts and paper stamps across the activities. The six core activities, export, safety controls, and accessibility are always free. Sociobot/Dodo is the merchant of record.</p>
     ${weekendUnlocked ? '<p class="notice"><strong>Weekend Ink is active on this device.</strong> Extra stamps are waiting inside the activities.</p>' : verdict && !verdict.valid ? `<p class="notice">License no longer active (${escapeHtml(verdict.reason ?? 'not valid')}). Core activities are unchanged.</p>` : ''}
@@ -393,10 +533,10 @@ async function renderParentDesk(dialog: HTMLDialogElement) {
   dialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => dialog.close());
   dialog.querySelector('[data-save-selection]')?.addEventListener('click', () => {
     selected = Array.from(dialog.querySelectorAll<HTMLInputElement>('.check-list input:checked')).map(input => input.value as ActivityId);
-    localStorage.setItem(SELECTED_KEY, JSON.stringify(selected));
-    dialog.close(); renderHome(); showToast('The front page now shows the chosen departments.');
+    storage.setItem(SELECTED_KEY, JSON.stringify(selected));
+    dialog.close(); renderRoute(); showToast('The front page now shows the chosen activities.');
   });
-  dialog.querySelector<HTMLInputElement>('[data-small]')?.addEventListener('change', event => { localStorage.setItem(SMALL_KEY, (event.currentTarget as HTMLInputElement).checked ? 'on' : 'off'); document.body.classList.toggle('small-download', (event.currentTarget as HTMLInputElement).checked); dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = 'Display choice saved on this device.'; });
+  dialog.querySelector<HTMLInputElement>('[data-small]')?.addEventListener('change', event => { storage.setItem(SMALL_KEY, (event.currentTarget as HTMLInputElement).checked ? 'on' : 'off'); document.body.classList.toggle('small-download', (event.currentTarget as HTMLInputElement).checked); dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = 'Display choice saved on this device.'; });
   dialog.querySelector('[data-install]')?.addEventListener('click', async () => { if (!installPrompt) return; await installPrompt.prompt(); const result = await installPrompt.userChoice; dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = result.outcome === 'accepted' ? 'Install accepted. The browser will finish it.' : 'Install dismissed. You can install later.'; installPrompt = undefined; });
   dialog.querySelector('[data-export]')?.addEventListener('click', () => {
     const blob = new Blob([JSON.stringify({ product: 'creative-cartridge', exportedAt: new Date().toISOString(), works }, null, 2)], { type: 'application/json' });
@@ -404,11 +544,11 @@ async function renderParentDesk(dialog: HTMLDialogElement) {
   });
   dialog.querySelector<HTMLInputElement>('[data-import]')?.addEventListener('change', async event => { const file = (event.currentTarget as HTMLInputElement).files?.[0]; if (!file) return; try { const parsed = JSON.parse(await file.text()); const count = await importWorks(parsed.works ?? parsed); dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = `Imported ${count} ${count === 1 ? 'piece' : 'pieces'}.`; await renderParentDesk(dialog); } catch (error) { dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = error instanceof Error ? error.message : 'That backup could not be imported.'; } });
   dialog.querySelector('[data-clear-all]')?.addEventListener('click', async () => { if (!confirm(`Permanently remove all ${storageWorks} from this browser? Export first if you want a backup.`)) return; await clearWorks(); await renderParentDesk(dialog); dialog.querySelector<HTMLElement>('[data-parent-status]')!.textContent = 'All saved pieces were removed from this browser.'; });
-  dialog.querySelector<HTMLFormElement>('[data-license-form]')?.addEventListener('submit', async event => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license')?.toString().trim() ?? ''; const status = dialog.querySelector<HTMLElement>('[data-license-status]')!; if (!token) { status.textContent = 'Paste the complete license token first.'; return; } localStorage.setItem(LICENSE_KEY, token); status.textContent = navigator.onLine ? 'Checking this license…' : 'Saved. Connect once to verify and unlock it.'; const valid = await verifyLicense(true); status.textContent = valid ? 'Weekend Ink restored on this device.' : navigator.onLine ? 'That license is not active for Creative Cartridge.' : 'Saved. Connect once to verify it.'; if (valid) window.setTimeout(() => renderParentDesk(dialog), 700); });
+  dialog.querySelector<HTMLFormElement>('[data-license-form]')?.addEventListener('submit', async event => { event.preventDefault(); const token = new FormData(event.currentTarget as HTMLFormElement).get('license')?.toString().trim() ?? ''; const status = dialog.querySelector<HTMLElement>('[data-license-status]')!; if (!token) { status.textContent = 'Paste the complete license token first.'; return; } storage.setItem(LICENSE_KEY, token); status.textContent = navigator.onLine ? 'Checking this license…' : 'Saved. Connect once to verify and unlock it.'; const valid = await verifyLicense(true); status.textContent = valid ? 'Weekend Ink restored on this device.' : navigator.onLine ? 'That license is not active for Creative Cartridge.' : 'Saved. Connect once to verify it.'; if (valid) window.setTimeout(() => renderParentDesk(dialog), 700); });
 }
 
 async function verifyLicense(force = false) {
-  const token = localStorage.getItem(LICENSE_KEY);
+  const token = storage.getItem(LICENSE_KEY);
   if (!token) return false;
   const cached = readVerdict();
   if (!force && cached && Date.now() - cached.checkedAt < 86_400_000) { weekendUnlocked = cached.valid; return cached.valid; }
@@ -418,7 +558,7 @@ async function verifyLicense(force = false) {
     if (!response.ok) throw new Error('Verification service unavailable.');
     const result = await response.json() as { valid: boolean; reason?: string };
     const record = { valid: result.valid, reason: result.reason, checkedAt: Date.now() };
-    localStorage.setItem(VERDICT_KEY, JSON.stringify(record)); weekendUnlocked = result.valid;
+    storage.setItem(VERDICT_KEY, JSON.stringify(record)); weekendUnlocked = result.valid;
     return result.valid;
   } catch { return weekendUnlocked; }
 }
@@ -446,22 +586,23 @@ async function registerOffline() {
 function acceptReturnedLicense() {
   const url = new URL(location.href);
   const license = url.searchParams.get('license');
-  if (!license) return;
-  localStorage.setItem(LICENSE_KEY, license);
+  if (!license) return false;
+  storage.setItem(LICENSE_KEY, license);
   url.searchParams.delete('license');
   history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
   showToast('License received. Checking Weekend Ink…');
   void verifyLicense(true).then(valid => showToast(valid ? 'Weekend Ink is ready.' : 'The license could not be activated. Open the parent desk to retry.'));
+  return true;
 }
 
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event as BeforeInstallPromptEvent; });
 window.addEventListener('online', updateNetworkState);
 window.addEventListener('offline', updateNetworkState);
+window.addEventListener('popstate', () => renderRoute(true));
 
-renderHome();
-acceptReturnedLicense();
-void verifyLicense();
-void registerOffline();
-
-const initialActivity = location.hash.slice(1) as ActivityId;
-if (ACTIVITY_IDS.includes(initialActivity)) openActivity(initialActivity);
+void seedDemo().then(() => {
+  renderRoute();
+  const receivedLicense = acceptReturnedLicense();
+  if ((!demoMode || storage.getItem(LICENSE_KEY)) && !receivedLicense) void verifyLicense();
+  void registerOffline();
+});

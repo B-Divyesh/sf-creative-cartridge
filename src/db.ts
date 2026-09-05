@@ -9,8 +9,19 @@ export type Work = {
 const DB_NAME = 'creative-cartridge';
 const STORE = 'works';
 
+// Demo work deliberately lives in a second IndexedDB database.  This is set
+// before the first database operation, so a demo can never read or write the
+// family's normal archive.
+let namespace = '';
+
+export const setStorageNamespace = (value: string) => {
+  namespace = value;
+};
+
+const databaseName = () => namespace ? `${namespace}${DB_NAME}` : DB_NAME;
+
 const database = (): Promise<IDBDatabase> => new Promise((resolve, reject) => {
-  const request = indexedDB.open(DB_NAME, 1);
+  const request = indexedDB.open(databaseName(), 1);
   request.onupgradeneeded = () => {
     const db = request.result;
     if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
