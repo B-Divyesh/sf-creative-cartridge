@@ -1,109 +1,64 @@
-# Creative Cartridge — repair handoff
+# Creative Cartridge — verification 4 handoff
 
-Work order: `creative-cartridge-repair-3`
+Work order: `creative-cartridge-verify-4`
 
 Completed: 2026-09-05
 
 Live URL: <https://creative-cartridge.sociobot.in/>
 
-Implementation SHA: `64a56e023efd043e85ee5532a07d4f0b0c37598d`
+Implementation candidate: `64a56e023efd043e85ee5532a07d4f0b0c37598d`
 
-Documentation SHA at handoff start: `f8758036fd65b98fbc1ba37662768649487f297b`
+Documentation reviewed: `4992a4d4f874fffbd384fe5205100a204d7b08cb`
 
-Base reviewed SHA: `3446e03ab31277868785560869af288354869086`
+## Result
 
-## What changed
+**FAIL — 3 findings and 4 incompletely tested claims.**
 
-- Added `/demo`, a one-click populated sample with six realistic pieces.
-  Demo uses only `demo:` localStorage keys and a separate
-  `demo:creative-cartridge` IndexedDB database. Its fixed banner offers
-  **Reset demo** and **Start for real**.
-- Added `.factory/demo.md`, `.factory/claims.json`, and fifteen isolated,
-  outcome-based claim checks. Each declared command was run from the final
-  candidate.
-- Reworked the first screen. It now names the job, audience, first action,
-  and offline/privacy/price facts before scrolling on a 390×844 phone.
-- Added direct demo and activity URLs, route titles, back/forward behavior,
-  a designed 404, shared legal-page frame, canonical/Open Graph/Twitter
-  metadata, Apple touch icon, sitemap entries, and a product-specific social
-  card derived from the original cover art.
-- Fixed two regressions found during final verification: service-worker cache
-  matching now ignores response `Vary` differences for offline assets, and
-  successful import confirmation now remains visible after the parent desk
-  refreshes.
-- Retained the earlier resolved fixes: activity accessibility, keyboard skip
-  focus, immutable asset caching, typed manifest, CSP and Permissions-Policy,
-  checkout availability, creature-name timestamp boundaries, and 44 px footer
-  targets.
+The detailed report is `.factory/verification-4.md`. No product code was
+modified.
 
-## Strict-review disposition
+## What passed
 
-| Review finding | Disposition |
-|---|---|
-| No isolated sample demo | Resolved — `/demo` is seeded, labeled, resettable, exits cleanly, and has separate browser storage. |
-| No claim inventory or tagged checks | Resolved — 15 claims map one-to-one to `@claim:<id>` Playwright tests. |
-| First screen did not name the job or expose sample action | Resolved — the phone run shows the action at 451 px of an 844 px viewport. |
-| No real routes, route titles, or 404 | Resolved — known activity paths rewrite to the shell; unknown paths return HTTP 404 and the designed page. |
-| Incomplete standard frame and sharing metadata | Resolved — header/footer, legal frame, required landing sections, canonical/social metadata, and 1200×630 card are present. |
+- Fresh desktop and phone first screens state the job, audience, first action,
+  and three facts before scrolling.
+- The populated demo is labeled, uses separate storage, resets to six pieces,
+  exits cleanly, and preserves real data.
+- All six activity flows, normal/invalid/boundary/recovery checks, keyboard,
+  focus, 200% text, reduced motion, privacy request capture, routes, legal
+  pages, deliberate 404, offline reload, and update notice passed.
+- Twenty-two live axe scans had zero serious or critical violations.
+- All 15 declared commands passed separately from a clean checkout.
+- `npm audit`, typecheck, 20/20 full tests, build, billing, local/live
+  `verify-url.sh`, and internal link checks passed.
+- Lighthouse completed at 100/100/100/100; FCP 1.1 s, LCP 1.3 s, TBT 80 ms,
+  CLS 0, Speed Index 1.1 s.
+- Seventeen deterministic build files matched live byte for byte. The worker
+  matched after cache-version normalization.
 
-## Verification
+## Findings
 
-Clean setup used Node 22, `npm ci`, and Playwright 1.58.2.
+1. **Medium:** four tagged claim commands do not assert their full public
+   wording: real archive isolation, cached paid state/manual restore offline,
+   both paid extras, and the full plural scope of free activities and controls.
+2. **Medium:** demo/activity canonical and social metadata remain the home
+   values; privacy, terms, and 404 omit part of the required social metadata.
+3. **Low:** seven phone targets measure below 44×44 px in the header, privacy
+   link, and demo controls.
 
-| Check | Result |
-|---|---|
-| `npm audit --audit-level=high` | PASS — 0 vulnerabilities |
-| `npm run typecheck` | PASS |
-| `npm test` | PASS — 20/20 Playwright checks in 38.8 s |
-| `npm run build` | PASS — `dist/` produced |
-| `npm run verify:billing` | PASS — checkout 303 to hosted checkout; invalid verifier 200 |
-| Every command in `.factory/claims.json` | PASS — all 15 commands, each against `/demo` |
-| Local `verify-url.sh` | PASS — title, `lang`, one h1, main, alt text, labels, no browser errors |
-| Live `verify-url.sh` | PASS — same semantic checks, 828 ms |
-| Live axe (home, demo, six activity routes, privacy, terms at 390 px) | PASS — zero serious/critical violations |
+Untested claim count: **4**.
 
-The final build has 41.56 KB raw main JavaScript (13.70 KB gzip) and 16.38 KB
-CSS (4.42 KB gzip), within the static budgets. The 1200×630 social card is
-69.8 KB.
+## Evidence
 
-Fresh live browser contexts verified:
+- `/work/.evidence/live-verify-4.json` — viewport, axe, demo isolation,
+  storage, offline, motion, focus, privacy, metadata, and target measurements
+- `/work/.evidence/live-boundary-4.json` — PIN, import, clear, history, links,
+  invalid route, and recovery checks
+- `/work/.evidence/lighthouse-verify-4.json` — completed Lighthouse report
+- `/work/.evidence/verify-url-live/` and `/work/.evidence/verify-url-local/`
+- `/work/.evidence/qa-report.md` and `/work/.evidence/qa-result.json`
 
-- Desktop 1440×1000 and phone 390×844: job is **Set up offline creative
-  play**; **Try it with sample data** is visible before scrolling; there is no
-  horizontal overflow or console/page error.
-- One click opens the six saved sample pieces with the persistent demo banner.
-  Reset restores the sample, and Start for real returns to the normal archive.
-- A service-worker-controlled `/demo` reload works offline and shows the
-  offline status.
-- `/demo`, each activity route, privacy, and terms return 200; a random path
-  returns HTTP 404 with the styled recovery page.
-- Live hashed JavaScript has one-year immutable caching; `sw.js` is no-store;
-  the manifest is `application/manifest+json`.
+## Next steps
 
-## Deployment
-
-The existing static product app `sf-creative-cartridge` was reused; no
-database, backend, or replica settings were changed. The final static upload
-succeeded and HTTPS was checked at the product URL.
-
-The first deployment attempt correctly failed before upload because Azure
-normalizes `/demo` and `/demo/` to the same route. Commit
-`7ef8e70` removed the redundant rule; the subsequent production upload
-succeeded. Commit `64a56e0` preserves the import success notice and was also
-successfully deployed.
-
-## Known gap
-
-Lighthouse could not finish in this worker: after supplying the installed
-Chromium path and trying a remote-debugging browser, Lighthouse reported a
-browser-tab crash before a report was written. This is a runner limitation;
-the independent fresh Chromium, `verify-url.sh`, and axe checks above completed
-without page or console errors. No product behavior gap is known.
-
-## Files for the next worker
-
-- `.factory/claims.json` — visitor claims and exact commands
-- `.factory/demo.md` — sample contents and storage isolation
-- `.factory/copy-audit.md` — landing copy counts and terminology
-- `.factory/catalog-description.txt` — copied to
-  `/work/.evidence/catalog-description.txt`
+Repair only the three reported areas, then repeat every declared command and
+the full live phone sweep. Do not treat green command exits as complete claim
+coverage until each tagged test asserts its whole declaration.
